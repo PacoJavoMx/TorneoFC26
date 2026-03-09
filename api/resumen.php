@@ -8,15 +8,34 @@ $sql = "
 SELECT
     t.id AS temporada_id,
     t.nombre AS temporada,
-    COALESCE(SUM(CASE WHEN p.ganador_id = 1 THEN 1 ELSE 0 END), 0) AS francisco_ganados,
-    COALESCE(SUM(CASE WHEN p.ganador_id = 2 THEN 1 ELSE 0 END), 0) AS josue_ganados,
-    COALESCE(SUM(CASE WHEN p.es_empate = 1 THEN 1 ELSE 0 END), 0) AS empates,
-    COUNT(p.id) AS total_partidos
+
+    COALESCE(mi1.ganados_iniciales, 0) + COALESCE(pr.francisco_reales, 0) AS francisco_ganados,
+    COALESCE(mi2.ganados_iniciales, 0) + COALESCE(pr.josue_reales, 0) AS josue_ganados,
+    COALESCE(pr.empates, 0) AS empates,
+    COALESCE(pr.total_partidos, 0) AS total_partidos_reales
 FROM temporadas t
-LEFT JOIN partidos p
-    ON p.temporada_id = t.id
+LEFT JOIN (
+    SELECT temporada_id, jugador_id, ganados_iniciales
+    FROM marcador_inicial
+) mi1
+    ON mi1.temporada_id = t.id AND mi1.jugador_id = 1
+LEFT JOIN (
+    SELECT temporada_id, jugador_id, ganados_iniciales
+    FROM marcador_inicial
+) mi2
+    ON mi2.temporada_id = t.id AND mi2.jugador_id = 2
+LEFT JOIN (
+    SELECT
+        temporada_id,
+        SUM(CASE WHEN ganador_id = 1 THEN 1 ELSE 0 END) AS francisco_reales,
+        SUM(CASE WHEN ganador_id = 2 THEN 1 ELSE 0 END) AS josue_reales,
+        SUM(CASE WHEN es_empate = 1 THEN 1 ELSE 0 END) AS empates,
+        COUNT(*) AS total_partidos
+    FROM partidos
+    GROUP BY temporada_id
+) pr
+    ON pr.temporada_id = t.id
 WHERE t.id = ?
-GROUP BY t.id, t.nombre
 ";
 
 $stmt = $conn->prepare($sql);
@@ -51,7 +70,7 @@ echo json_encode([
     "francisco_ganados" => $francisco,
     "josue_ganados" => $josue,
     "empates" => (int)$row["empates"],
-    "total_partidos" => (int)$row["total_partidos"],
+    "total_partidos" => (int)$row["total_partidos_reales"],
     "campeon_actual" => $campeon,
     "diferencia" => $diferencia
 ]);
