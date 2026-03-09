@@ -2,7 +2,7 @@
 $host = "31.97.208.37";
 $dbname = "u332392237_TorneoFC26";
 $username = "u332392237_TorneoFC26user";
-$password = "Temportal2026*";
+$password = "Temporal2026*";
 
 $conn = new mysqli($host, $username, $password, $dbname);
 
