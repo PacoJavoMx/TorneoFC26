@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marcador anual FC 26</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 16px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 28px;
+    }
+
+    h2 {
+      font-size: 22px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 20px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .mini-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      text-align: center;
+    }
+
+    .stat-box {
+      border-radius: 14px;
+      padding: 16px;
+      font-weight: bold;
+    }
+
+    .win { background: #dcfce7; }
+    .draw { background: #fef3c7; }
+    .loss { background: #ffe4e6; }
+
+    .stat-box .value {
+      font-size: 24px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #475569;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 15px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #0f172a;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.92;
+    }
+
+    .btn-outline {
+      background: white;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+
+    .full-width {
+      width: 100%;
+    }
+
+    .muted {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .error {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .match-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .match-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .match-info {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .match-score {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .champion {
+      text-align: center;
+    }
+
+    .champion-name {
+      font-size: 34px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .empty-state {
+      border: 1px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 28px;
+      text-align: center;
+      color: #64748b;
+    }
+
+    @media (max-width: 900px) {
+      .grid-3,
+      .grid-2,
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <h1>🏆 Marcador anual FC 26</h1>
+        <button class="btn-outline" id="btn-recargar">Recargar</button>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label class="label">Jugador 1</label>
+          <input type="text" id="jugador1" disabled />
+        </div>
+        <div>
+          <label class="label">Jugador 2</label>
+          <input type="text" id="jugador2" disabled />
+        </div>
+      </div>
+    </div>
+
+    <div class="card champion">
+      <h2>👑 Campeón hasta el momento</h2>
+      <div class="champion-name" id="campeon-actual">-</div>
+      <div class="muted" id="ventaja-actual">Ventaja actual: 0 partidos</div>
+    </div>
+
+    <div class="card error" id="error-box" style="display:none;"></div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-header">
+          <h2>📅 Registrar partido</h2>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div>
+            <label class="label">Fecha</label>
+            <input type="date" id="fecha" />
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <label class="label" id="label-score1">Jugador 1</label>
+              <input type="number" min="0" id="score1" />
+            </div>
+            <div>
+              <label class="label" id="label-score2">Jugador 2</label>
+              <input type="number" min="0" id="score2" />
+            </div>
+          </div>
+
+          <button class="btn-primary full-width" id="btn-guardar">Guardar resultado</button>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="stats-grid">
+          <div class="card">
+            <h3 id="titulo-jugador1">Jugador 1</h3>
+            <div class="mini-stats" style="margin-top:16px;">
+              <div class="stat-box win">
+                <span class="value" id="j1-ganados">0</span>
+                <span>Ganados</span>
+              </div>
+              <div class="stat-box draw">
+                <span class="value" id="j1-empates">0</span>
+                <span>Empates</span>
+              </div>
+              <div class="stat-box loss">
+                <span class="value" id="j1-perdidos">0</span>
+                <span>Perdidos</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 id="titulo-jugador2">Jugador 2</h3>
+            <div class="mini-stats" style="margin-top:16px;">
+              <div class="stat-box win">
+                <span class="value" id="j2-ganados">0</span>
+                <span>Ganados</span>
+              </div>
+              <div class="stat-box draw">
+                <span class="value" id="j2-empates">0</span>
+                <span>Empates</span>
+              </div>
+              <div class="stat-box loss">
+                <span class="value" id="j2-perdidos">0</span>
+                <span>Perdidos</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>📜 Historial de partidos</h2>
+          </div>
+          <div id="historial-container" class="match-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = "http://localhost:3001";
+    const TEMPORADA_ID = 1;
+
+    let jugadores = [];
+    let resumen = null;
+
+    const el = {
+      jugador1: document.getElementById("jugador1"),
+      jugador2: document.getElementById("jugador2"),
+      tituloJugador1: document.getElementById("titulo-jugador1"),
+      tituloJugador2: document.getElementById("titulo-jugador2"),
+      labelScore1: document.getElementById("label-score1"),
+      labelScore2: document.getElementById("label-score2"),
+      campeonActual: document.getElementById("campeon-actual"),
+      ventajaActual: document.getElementById("ventaja-actual"),
+      j1Ganados: document.getElementById("j1-ganados"),
+      j1Empates: document.getElementById("j1-empates"),
+      j1Perdidos: document.getElementById("j1-perdidos"),
+      j2Ganados: document.getElementById("j2-ganados"),
+      j2Empates: document.getElementById("j2-empates"),
+      j2Perdidos: document.getElementById("j2-perdidos"),
+      historial: document.getElementById("historial-container"),
+      fecha: document.getElementById("fecha"),
+      score1: document.getElementById("score1"),
+      score2: document.getElementById("score2"),
+      btnGuardar: document.getElementById("btn-guardar"),
+      btnRecargar: document.getElementById("btn-recargar"),
+      errorBox: document.getElementById("error-box")
+    };
+
+    el.fecha.value = new Date().toISOString().slice(0, 10);
+
+    function mostrarError(mensaje) {
+      el.errorBox.style.display = "block";
+      el.errorBox.textContent = mensaje;
+    }
+
+    function ocultarError() {
+      el.errorBox.style.display = "none";
+      el.errorBox.textContent = "";
+    }
+
+    function getJugador1() {
+      return jugadores[0] || { id: 1, nombre: "Francisco" };
+    }
+
+    function getJugador2() {
+      return jugadores[1] || { id: 2, nombre: "Josue" };
+    }
+
+    function renderJugadores() {
+      const jugador1 = getJugador1();
+      const jugador2 = getJugador2();
+
+      el.jugador1.value = jugador1.nombre;
+      el.jugador2.value = jugador2.nombre;
+      el.tituloJugador1.textContent = jugador1.nombre;
+      el.tituloJugador2.textContent = jugador2.nombre;
+      el.labelScore1.textContent = jugador1.nombre;
+      el.labelScore2.textContent = jugador2.nombre;
+    }
+
+    function renderResumen() {
+      const jugador1 = getJugador1();
+      const jugador2 = getJugador2();
+
+      const j1Ganados = Number(resumen?.francisco_ganados || 0);
+      const j2Ganados = Number(resumen?.josue_ganados || 0);
+      const empates = Number(resumen?.empates || 0);
+      const campeon = resumen?.campeon_actual || "Empate";
+      const diferencia = Number(resumen?.diferencia || 0);
+
+      el.campeonActual.textContent = campeon;
+      el.ventajaActual.textContent = `Ventaja actual: ${diferencia} partidos`;
+
+      el.j1Ganados.textContent = j1Ganados;
+      el.j1Empates.textContent = empates;
+      el.j1Perdidos.textContent = j2Ganados;
+
+      el.j2Ganados.textContent = j2Ganados;
+      el.j2Empates.textContent = empates;
+      el.j2Perdidos.textContent = j1Ganados;
+    }
+
+    function renderHistorial(partidos) {
+      if (!partidos.length) {
+        el.historial.innerHTML = '<div class="empty-state">Aún no hay partidos registrados</div>';
+        return;
+      }
+
+      el.historial.innerHTML = partidos.map(partido => `
+        <div class="match-item">
+          <div class="match-info">
+            <div class="muted">${partido.fecha_partido}</div>
+            <div class="match-score">${partido.jugador1_nombre} ${partido.score1} - ${partido.score2} ${partido.jugador2_nombre}</div>
+            <div class="muted">Resultado: ${partido.es_empate == 1 ? "Empate" : partido.ganador_nombre}</div>
+          </div>
+          <button class="btn-outline" onclick="eliminarPartido(${partido.id})">Eliminar</button>
+        </div>
+      `).join("");
+    }
+
+    async function cargarDatos() {
+      try {
+        ocultarError();
+
+        const [jugadoresRes, partidosRes, resumenRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/jugadores`),
+          fetch(`${API_BASE_URL}/partidos?temporada_id=${TEMPORADA_ID}`),
+          fetch(`${API_BASE_URL}/resumen?temporada_id=${TEMPORADA_ID}`)
+        ]);
+
+        if (!jugadoresRes.ok || !partidosRes.ok || !resumenRes.ok) {
+          throw new Error("No fue posible cargar la información desde la API.");
+        }
+
+        jugadores = await jugadoresRes.json();
+        const partidos = await partidosRes.json();
+        resumen = await resumenRes.json();
+
+        renderJugadores();
+        renderResumen();
+        renderHistorial(partidos);
+      } catch (error) {
+        mostrarError(error.message || "Ocurrió un error al cargar la información.");
+      }
+    }
+
+    async function guardarPartido() {
+      const jugador1 = getJugador1();
+      const jugador2 = getJugador2();
+      const fecha = el.fecha.value;
+      const score1 = Number(el.score1.value);
+      const score2 = Number(el.score2.value);
+
+      if (!fecha || Number.isNaN(score1) || Number.isNaN(score2) || score1 < 0 || score2 < 0) {
+        mostrarError("Captura una fecha válida y marcadores correctos.");
+        return;
+      }
+
+      try {
+        ocultarError();
+        el.btnGuardar.disabled = true;
+        el.btnGuardar.textContent = "Guardando...";
+
+        const response = await fetch(`${API_BASE_URL}/partidos`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            temporada_id: TEMPORADA_ID,
+            jugador1_id: jugador1.id,
+            jugador2_id: jugador2.id,
+            fecha_partido: fecha,
+            score1,
+            score2,
+            observaciones: "Capturado desde frontend HTML"
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error("No fue posible guardar el partido.");
+        }
+
+        el.score1.value = "";
+        el.score2.value = "";
+
+        await cargarDatos();
+      } catch (error) {
+        mostrarError(error.message || "Ocurrió un error al guardar el partido.");
+      } finally {
+        el.btnGuardar.disabled = false;
+        el.btnGuardar.textContent = "Guardar resultado";
+      }
+    }
+
+    async function eliminarPartido(id) {
+      try {
+        ocultarError();
+
+        const response = await fetch(`${API_BASE_URL}/partidos/${id}`, {
+          method: "DELETE"
+        });
+
+        if (!response.ok) {
+          throw new Error("No fue posible eliminar el partido.");
+        }
+
+        await cargarDatos();
+      } catch (error) {
+        mostrarError(error.message || "Ocurrió un error al eliminar el partido.");
+      }
+    }
+
+    el.btnGuardar.addEventListener("click", guardarPartido);
+    el.btnRecargar.addEventListener("click", cargarDatos);
+
+    cargarDatos();
+    window.eliminarPartido = eliminarPartido;
+  </script>
+</body>
+</html>
