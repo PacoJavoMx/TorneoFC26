@@ -135,11 +135,6 @@
       color: #0f172a;
     }
 
-    .btn-danger {
-      background: #dc2626;
-      color: white;
-    }
-
     .full-width {
       width: 100%;
     }
@@ -201,10 +196,69 @@
       color: #64748b;
     }
 
+    .racha-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .racha-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 18px;
+      background: #f8fafc;
+    }
+
+    .racha-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .racha-icono {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .racha-valor {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .racha-detalle {
+      font-size: 14px;
+      color: #475569;
+      font-weight: bold;
+    }
+
+    .racha-win {
+      background: #dcfce7;
+      border-color: #86efac;
+    }
+
+    .racha-draw {
+      background: #fef3c7;
+      border-color: #fde68a;
+    }
+
+    .racha-loss {
+      background: #ffe4e6;
+      border-color: #fda4af;
+    }
+
+    .racha-empty {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
     @media (max-width: 900px) {
       .grid-3,
       .grid-2,
-      .stats-grid {
+      .stats-grid,
+      .racha-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -233,6 +287,20 @@
       <h2>👑 Campeón hasta el momento</h2>
       <div class="champion-name" id="campeon-actual">-</div>
       <div class="muted" id="ventaja-actual">Ventaja actual: 0 partidos</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>🔥 Racha activa</h2>
+      </div>
+      <div class="racha-grid" id="racha-container"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>🏅 Mejor racha ganadora histórica</h2>
+      </div>
+      <div class="racha-grid" id="mejor-racha-container"></div>
     </div>
 
     <div class="card error" id="error-box" style="display:none;"></div>
@@ -313,11 +381,12 @@
   </div>
 
   <script>
-    const API_BASE_URL = "https://fc26brothers.com.mx/index.html/api";
+    const API_BASE_URL = "https://fc26brothers.com.mx/api";
     const TEMPORADA_ID = 1;
 
     let jugadores = [];
     let resumen = null;
+    let partidosGlobal = [];
 
     const el = {
       jugador1: document.getElementById("jugador1"),
@@ -335,6 +404,8 @@
       j2Empates: document.getElementById("j2-empates"),
       j2Perdidos: document.getElementById("j2-perdidos"),
       historial: document.getElementById("historial-container"),
+      rachaContainer: document.getElementById("racha-container"),
+      mejorRachaContainer: document.getElementById("mejor-racha-container"),
       fecha: document.getElementById("fecha"),
       score1: document.getElementById("score1"),
       score2: document.getElementById("score2"),
@@ -360,7 +431,7 @@
     }
 
     function getJugador2() {
-      return jugadores[1] || { id: 2, nombre: "Josue" };
+      return jugadores[1] || { id: 2, nombre: "Josué" };
     }
 
     function renderJugadores() {
@@ -376,9 +447,6 @@
     }
 
     function renderResumen() {
-      const jugador1 = getJugador1();
-      const jugador2 = getJugador2();
-
       const j1Ganados = Number(resumen?.francisco_ganados || 0);
       const j2Ganados = Number(resumen?.josue_ganados || 0);
       const empates = Number(resumen?.empates || 0);
@@ -397,20 +465,206 @@
       el.j2Perdidos.textContent = j1Ganados;
     }
 
+    function ordenarPartidosRecientes(partidos) {
+      return [...partidos].sort((a, b) => {
+        const fechaA = new Date(a.fecha_partido);
+        const fechaB = new Date(b.fecha_partido);
+
+        if (fechaB - fechaA !== 0) {
+          return fechaB - fechaA;
+        }
+
+        return Number(b.id) - Number(a.id);
+      });
+    }
+
+    function obtenerResultadoJugador(partido, nombreJugador) {
+      const nombre = (nombreJugador || "").trim().toLowerCase();
+      const jugador1 = (partido.jugador1_nombre || "").trim().toLowerCase();
+      const jugador2 = (partido.jugador2_nombre || "").trim().toLowerCase();
+
+      const score1 = Number(partido.score1);
+      const score2 = Number(partido.score2);
+
+      if (score1 === score2) {
+        return "empate";
+      }
+
+      if (nombre === jugador1) {
+        return score1 > score2 ? "victoria" : "derrota";
+      }
+
+      if (nombre === jugador2) {
+        return score2 > score1 ? "victoria" : "derrota";
+      }
+
+      return null;
+    }
+
+    function calcularRachaActiva(partidos, nombreJugador) {
+      const ordenados = ordenarPartidosRecientes(partidos);
+      let tipoActual = null;
+      let cantidad = 0;
+
+      for (const partido of ordenados) {
+        const resultado = obtenerResultadoJugador(partido, nombreJugador);
+
+        if (!resultado) continue;
+
+        if (tipoActual === null) {
+          tipoActual = resultado;
+          cantidad = 1;
+          continue;
+        }
+
+        if (resultado === tipoActual) {
+          cantidad++;
+        } else {
+          break;
+        }
+      }
+
+      if (tipoActual === null) {
+        return {
+          cantidad: 0,
+          texto: "Sin partidos registrados",
+          clase: "racha-empty",
+          icono: "📭"
+        };
+      }
+
+      if (tipoActual === "victoria") {
+        return {
+          cantidad,
+          texto: `${cantidad} victoria${cantidad !== 1 ? "s" : ""} seguida${cantidad !== 1 ? "s" : ""}`,
+          clase: "racha-win",
+          icono: "🔥"
+        };
+      }
+
+      if (tipoActual === "derrota") {
+        return {
+          cantidad,
+          texto: `${cantidad} derrota${cantidad !== 1 ? "s" : ""} seguida${cantidad !== 1 ? "s" : ""}`,
+          clase: "racha-loss",
+          icono: "🥶"
+        };
+      }
+
+      return {
+        cantidad,
+        texto: `${cantidad} empate${cantidad !== 1 ? "s" : ""} seguido${cantidad !== 1 ? "s" : ""}`,
+        clase: "racha-draw",
+        icono: "🤝"
+      };
+    }
+
+    function calcularMejorRachaGanadora(partidos, nombreJugador) {
+      const ordenados = ordenarPartidosRecientes(partidos).reverse();
+      let rachaActual = 0;
+      let mejorRacha = 0;
+
+      for (const partido of ordenados) {
+        const resultado = obtenerResultadoJugador(partido, nombreJugador);
+
+        if (!resultado) continue;
+
+        if (resultado === "victoria") {
+          rachaActual++;
+          if (rachaActual > mejorRacha) {
+            mejorRacha = rachaActual;
+          }
+        } else {
+          rachaActual = 0;
+        }
+      }
+
+      if (mejorRacha === 0) {
+        return {
+          cantidad: 0,
+          texto: "Aún no tiene racha ganadora registrada",
+          clase: "racha-empty",
+          icono: "🏅"
+        };
+      }
+
+      return {
+        cantidad: mejorRacha,
+        texto: `${mejorRacha} victoria${mejorRacha !== 1 ? "s" : ""} consecutiva${mejorRacha !== 1 ? "s" : ""}`,
+        clase: "racha-win",
+        icono: "🏅"
+      };
+    }
+
+    function renderRachas() {
+      const jugador1 = getJugador1();
+      const jugador2 = getJugador2();
+
+      const racha1 = calcularRachaActiva(partidosGlobal, jugador1.nombre);
+      const racha2 = calcularRachaActiva(partidosGlobal, jugador2.nombre);
+
+      el.rachaContainer.innerHTML = `
+        <div class="racha-card ${racha1.clase}">
+          <div class="racha-header">
+            <h3>${jugador1.nombre}</h3>
+            <span class="racha-icono">${racha1.icono}</span>
+          </div>
+          <div class="racha-valor">${racha1.cantidad}</div>
+          <div class="racha-detalle">${racha1.texto}</div>
+        </div>
+        <div class="racha-card ${racha2.clase}">
+          <div class="racha-header">
+            <h3>${jugador2.nombre}</h3>
+            <span class="racha-icono">${racha2.icono}</span>
+          </div>
+          <div class="racha-valor">${racha2.cantidad}</div>
+          <div class="racha-detalle">${racha2.texto}</div>
+        </div>
+      `;
+    }
+
+    function renderMejorRachaHistorica() {
+      const jugador1 = getJugador1();
+      const jugador2 = getJugador2();
+
+      const mejor1 = calcularMejorRachaGanadora(partidosGlobal, jugador1.nombre);
+      const mejor2 = calcularMejorRachaGanadora(partidosGlobal, jugador2.nombre);
+
+      el.mejorRachaContainer.innerHTML = `
+        <div class="racha-card ${mejor1.clase}">
+          <div class="racha-header">
+            <h3>${jugador1.nombre}</h3>
+            <span class="racha-icono">${mejor1.icono}</span>
+          </div>
+          <div class="racha-valor">${mejor1.cantidad}</div>
+          <div class="racha-detalle">${mejor1.texto}</div>
+        </div>
+        <div class="racha-card ${mejor2.clase}">
+          <div class="racha-header">
+            <h3>${jugador2.nombre}</h3>
+            <span class="racha-icono">${mejor2.icono}</span>
+          </div>
+          <div class="racha-valor">${mejor2.cantidad}</div>
+          <div class="racha-detalle">${mejor2.texto}</div>
+        </div>
+      `;
+    }
+
     function renderHistorial(partidos) {
-      if (!partidos.length) {
+      const partidosOrdenados = ordenarPartidosRecientes(partidos);
+
+      if (!partidosOrdenados.length) {
         el.historial.innerHTML = '<div class="empty-state">Aún no hay partidos registrados</div>';
         return;
       }
 
-      el.historial.innerHTML = partidos.map(partido => `
+      el.historial.innerHTML = partidosOrdenados.map(partido => `
         <div class="match-item">
           <div class="match-info">
             <div class="muted">${partido.fecha_partido}</div>
             <div class="match-score">${partido.jugador1_nombre} ${partido.score1} - ${partido.score2} ${partido.jugador2_nombre}</div>
             <div class="muted">Resultado: ${partido.es_empate == 1 ? "Empate" : partido.ganador_nombre}</div>
           </div>
-          <button class="btn-outline" onclick="eliminarPartido(${partido.id})">Eliminar</button>
         </div>
       `).join("");
     }
@@ -430,12 +684,14 @@
         }
 
         jugadores = await jugadoresRes.json();
-        const partidos = await partidosRes.json();
+        partidosGlobal = await partidosRes.json();
         resumen = await resumenRes.json();
 
         renderJugadores();
         renderResumen();
-        renderHistorial(partidos);
+        renderRachas();
+        renderMejorRachaHistorica();
+        renderHistorial(partidosGlobal);
       } catch (error) {
         mostrarError(error.message || "Ocurrió un error al cargar la información.");
       }
@@ -490,29 +746,10 @@
       }
     }
 
-    async function eliminarPartido(id) {
-      try {
-        ocultarError();
-
-        const response = await fetch(`${API_BASE_URL}/partidos.php?id=${id}`, {
-          method: "DELETE"
-        });
-
-        if (!response.ok) {
-          throw new Error("No fue posible eliminar el partido.");
-        }
-
-        await cargarDatos();
-      } catch (error) {
-        mostrarError(error.message || "Ocurrió un error al eliminar el partido.");
-      }
-    }
-
     el.btnGuardar.addEventListener("click", guardarPartido);
     el.btnRecargar.addEventListener("click", cargarDatos);
 
     cargarDatos();
-    window.eliminarPartido = eliminarPartido;
   </script>
 </body>
 </html>
